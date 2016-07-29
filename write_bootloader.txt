@@ -1,0 +1,155 @@
+".text"、".data"、".bss"
+依次表示的是：
+".text" -----“以下是代码段”，
+".data" -----“以下是初始化数据段”，
+".bss" -------“以下是未初始化数据段”
+".global"
+定义一个全局符号，通常是为ld使用。比如经常看到的  .global _start
+.".ascii"、".byte"、".short"、".int"、".long"、".word"、".quad"
+定义一个字符串，并为它分配空间
+定义一个字节，并为它分配空间，占单字节（8位），0x34（00110100）
+定义一个短整型，并为它分配空间，占双字节，0x1234
+定义一个整型，并为它分配空间，占四字节，0x12345678
+定义一个长整型，并为它分配空间，占四字节，0x12345678
+定义一个字，并为它分配空间，
+定义一个，并为它分配定义，占八字节，...
+比如
+.long 0x22011110//BWSCON
+.long 0x00000700//BANKCON0
+...
+".align"
+.align absexpr1,absexpr2
+以某种对齐方式,在未使用的存储区域填充值. 第一个值表示对齐方式,4, 8,16或32. 第二个表达式值表示填充的值
+".code"
+.code [16|32]: 指定指令代码产生的长度, 16表示Thumb指令, 32表示ARM指令
+
+".macro .endm"
+.macro: 定义一段宏代码,.macro表示代码的开始,.endm表示代码的结束,.exitm跳出宏, 示例如下:
+.macro SHIFTLEFT a, b.if \b < 0 --->指定宏的传入参数和执行条件
+mov \a, \a, ASR #-\b
+.exitm
+.endif
+mov \a, \a, LSL #\b
+.endm
+
+Bootloader第一阶段执行的大体流程：
+.text 声明代码段
+.global _start 定义一个全局标号_start,代码的入口函数entry(_start)
+_start:
+1.	关看门狗
+Ldr r0,=0x5300 0000
+Mov r1 , #0
+Str r1,[r0]
+2.	关中断 暂时不设
+3.	初始化时钟 如果不设置 时钟=默认的外部时钟12M
+设置分频系数
+设置Mpll
+设置锁定时间
+4.	初始化sdram
+设置sdram控制寄存器使能值的数据
+Sdram_config:
+.long(占4个字节的初始值)   xxx
+.long                      xxxx
+…..
+所需操作将上述值依次写入到sdram控制寄存器中。
+BWSCON = 0x48000000
+BANKCON0=0x48000004
+。。。。。
+MRSRB7 = 0x48000030 ------13*4个
+汇编实现：
+Ldr r0, =0x4800 0000
+adr r1 ,= Sdram_config // ldr & adr???
+Add r3,r0,#(13*4)
+
+No:	Ldr r2,[r1],#4
+Str r2,[r0],#4
+Cmp r0 , r3
+Bne No
+	C语言实现：
+	设置堆栈，c函数用于保存变量值
+	Ldr sp , 0x3400 0000 ;直接将sp指向栈顶指针，向下生长的。
+	Bl sdram_init
+	C中设置：
+	设置：define BWSCON 48000000
+1.	定义一个四字节的数组；
+Unsigned long xxx[]={0x…,xxxx,xxxxx} ----> 13*4
+2.	定义一个指针指向与BWSCON的地址
+Unsigned long*p=(unsigned long *)BWSCON ; 4字节
+For(i=0;i<13,i++)
+{
+		P[i]=Xxx[i] ; p[2] =2*4个字节
+}
+设置相关寄存器：
+#define BWSCON  (*(volatile unsigned long *) 0x48000000) ;volatile 指定编译每次都从该地址处取值， unsigned long 4字节，volatile unsigned long *是一个指针类型，对应于0x48000000地址， *(volatile unsigned long *)表达为地址处所存储的值 = BWSCON  
+…………………….
+5.	设置堆栈
+6.	代码重定位 nand ---> sdram （主要针对于uboot代码的重定位）
+Nand 初始化（对于nand flash进行基本配置）
+Nand init:
+设置基本的时间为：TWRPH1=0，TWRPH0=1，TACLS=0，由时钟分频决定
+NFCONF=(TWRPH1<<4)|( TWRPH0<<8)|( TACLS<<12)
+NFCONT=(1<<0)|(1<<1)|(1<<4);nand使能，禁止片选，初始ECC
+在初始化完成后，直接对于nand的相关数据地址寄存器送值寄可实现读写，
+代码拷贝
+Nand read:
+片选：NFCONT=(0<<1)
+写00h：NFCMMD=00h 告诉nand开始读操作，其后为地址
+写地址：8位总线，一次只能写8位，需要5次
+NFADDR（4个字节，共32位）
+5个周期：
+NFADDR=addr &0xff
+			Addr>>8
+			Addr>>16
+			Addr>>24
+			Addr>>32
+发完所有地址
+NFCMMD=03h
+等待：判断NFSTAT的0位是否忙，还是nand就绪
+取len长度的数据
+Buf= NFDATA;（需要定位当前地址在一页中的位置）
+7.	清除bss段
+8.	跳转到第二阶段
+Main
+1.	拷贝内核到指定位置
+//内核的写入位置为0x60000,大小0x200000，内核为uImage,包括64位头，
+//以下直接将nand中的去头的uImage=zImage ,拷贝到0x30008000
+//如果nand中存储的为zImage,源地址不需+64
+	nand_read(0x60000+64, (unsigned char *)0x30008000, 0x200000);
+=======================================
+uImage的解压缩地址为0x30008000
+mkimage -A arm -O linux -T kernel -C gzip -a 0x30008000 -e 0x30008000 -n "linux kernel image" -d linux.bin.gz uImage
+设置uImage的解压缩地址和参数地址
+arch/arm/boot/makefile --->
+arch/arm/mach-s3c2410/makefile.boot中
+   zreladdr-y	:= 0x30008000
+params_phys-y	:= 0x30000100
+========================================
+2.	设置相关的启动参数
+setup_start_tag();
+		params = (struct tag *)0x30000100;//uboot单方设置启动参数位置
+对应的内核中找启动参数：
+=====================================================
+位置:arch/arm/s3c2410/mach-smdk2410.c
+MACHINE_START(SMDK2410, "SMDK2410") /* @TODO: request a new identifier and switch* to SMDK2410 */
+	/* Maintainer: Jonas Dietsche */
+	.phys_io	= S3C2410_PA_UART,
+	.io_pg_offst	= (((u32)S3C24XX_VA_UART) >> 18) & 0xfffc,
+	.boot_params	= S3C2410_SDRAM_PA + 0x100,
+	.map_io		= smdk2410_map_io,
+	.init_irq	= s3c24xx_init_irq,
+	.init_machine	= smdk2410_init,
+	.timer		= &s3c24xx_timer,
+MACHINE_END
+=================================================
+
+setup_memory_tags();
+		params->u.mem.start = 0x30000000;
+		params->u.mem.size  = 64*1024*1024;
+setup_commandline_tag("noinitrd root=/dev/mtdblock3 init=/linuxrc console=ttySAC0");
+setup_end_tag();
+3.	跳转执行kernel
+volatile unsigned int *p = (volatile unsigned int *)0x30008000;
+theKernel = (void (*)(int, int, unsigned int))0x30008000;
+	theKernel(0, 362, 0x30000100);  
+不论哪种情况,  在跳到 Linux 内核执行之前 CPU 的寄存器必须满足以下条
+件:r0=0,r1=处理器类型,r2=标记列表在 RAM 中的地址。

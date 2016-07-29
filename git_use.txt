@@ -1,0 +1,44 @@
+Git的使用---版本管理 类于svn
+新建目录， 
+初始化一个git库  ----- git  init
+
+添加文件  -----------git   add
+完成提交说明 ---------  git  commit –m “说明内容”
+
+查看版本信息 ---------  git  status
+修改提交文件后
+Git diff ----查看版本差异
+Git log ------查看提交记录
+版本回退：回退到最新修改版本
+Git reset –hard HEAD^(HAED~100)
+Git reset –hard 112XXXX（版本号）
+Git reflog -----记录每条提交记录---版本号，git log 提交记录
+git checkout – file  -----撤销，文件恢复到之前内容
+git reset HEAD file  ----------将执行git add提交到缓存区的文件修改撤销，并恢复文件原先状态
+git rm 删除一个文件 
+git add 后可用git checkout恢复。
+
+
+创建分支dev，切换到dev分支：
+Git checkout –b dev
+= 1. Git branch dev---创建
+  2. git checkout dev------切换
+对于分支的操作，内容效果只限于分支
+git checkout master------切换回master分支
+：：dev分支下修改的内容不会显示在master分支
+Git merge dev-------合并dev分支到当前分支下，现在当前分支为master
+Git branch –d dev --------删除dev分支
+小结
+Git鼓励大量使用分支：
+查看分支：git branch
+创建分支：git branch <name>
+切换分支：git checkout <name>
+创建+切换分支：git checkout -b <name>
+合并某分支到当前分支：git merge <name>
+删除分支：git branch -d <name>
+当Git无法自动合并分支时，就必须首先解决冲突。解决冲突后，再提交，合并完成。
+用git log --graph命令可以看到分支合并图。
+
+read+write
+$git clone git@github.com:flyingbird1221/gerrit-trigger-plugin.git 
+

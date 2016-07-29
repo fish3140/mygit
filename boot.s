@@ -18,9 +18,10 @@ _start:
     mrc    p15, 0, r1, c1, c0, 0
     orr    r1, r1, #0xc0000000
     mcr    p15, 0, r1, c1, c0, 0
-	#设置mpll
-    ldr r0, =MPLLCON
-    ldr r1, =0x5c011                                ; MPLL is 400MHz
+	#设置mpllcon
+    ldr r0, =0x4C000004
+	 # MPLL is 400MHz
+    ldr r1, =0x5c011                               
     str r1, [r0]
     mov pc, lr
 
@@ -42,7 +43,7 @@ co_my:
 	ldr  r0 , =0x0
 	ldr r1 , =0x30000000
 	ldr r2 , =0x20000
-	bl nand_read
+	bl copy_to_sdram
 	bl main
 MAIN_LOOP:
        	b	MAIN_LOOP

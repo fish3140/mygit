@@ -1,4 +1,2 @@
-Git is a version control system.
-Git is free software.
-sdsdsd
-rrr
+now bootloader is writed for mini2440
+starting.....

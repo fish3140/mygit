@@ -11,6 +11,7 @@ _start:
 	b .
 	b HandleIRQ 
 	#0x18
+	b .
 reset:
 	#;关闭看门狗
 	ldr r0 , =0x53000000
@@ -52,7 +53,7 @@ co_my:
 	
 	ldr sp , =0x34000000
 	msr cpsr_c, #0xd2       @ 进入中断模式
-    ldr sp, =0x34000000     @ 设置中断模式栈指针
+    ldr sp, =4096    @ 设置中断模式栈指针
 
     msr cpsr_c, #0xd3       @ 进入管理模式
     ldr sp, =0x34000000     @ 设置管理模式栈指针，
@@ -60,8 +61,8 @@ co_my:
 	
 	bl nand_init
 	
-	ldr  r0 , =0x0
-	ldr r1 , =0x30000000
+	mov  r0 , #0
+	ldr r1 , =_start
 	ldr r2 , =0x20000
 	bl copy_to_sdram
 	#在指定运行地址为0x30000000（内存中），

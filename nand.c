@@ -54,10 +54,13 @@ int norflash()
 {
 	unsigned long *p=(*(volatile unsigned long *)0x0);
 	unsigned long aa;
+	unsigned long value;
+	value=*p;
 	*p=12;
 	aa=*p;
 	if(aa=12)
 	{
+		*p=value;
 		return 0;
 	}
 	return 1;
@@ -110,10 +113,4 @@ void puts(char *str)
 		putc(str[i]);
 		i++;
 	}
-}
-void main()
-{
-	uart0_init();
-	puts("hello world\n");
-	
 }

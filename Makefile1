@@ -1,0 +1,26 @@
+
+CC      = /home/publish/mayue/gcc-3.4.5-glibc-2.3.6/bin/arm-linux-gcc
+LD      = /home/publish/mayue/gcc-3.4.5-glibc-2.3.6/bin/arm-linux-ld
+AR      = /home/publish/mayue/gcc-3.4.5-glibc-2.3.6/bin/arm-linux-ar
+OBJCOPY = /home/publish/mayue/gcc-3.4.5-glibc-2.3.6/bin/arm-linux-objcopy
+OBJDUMP = /home/publish/mayue/gcc-3.4.5-glibc-2.3.6/bin/arm-linux-objdump
+
+CFLAGS 		:= -Wall -O2
+CPPFLAGS   	:= -nostdinc -nostdlib -fno-builtin
+
+objs := boot.o nand.o led.o interrupt.o main.o
+
+boot.bin: $(objs)
+	${LD} -Tboot.lds -o boot.elf $^
+	${OBJCOPY} -O binary -S boot.elf $@
+	${OBJDUMP} -D -m arm boot.elf > boot.dis
+	
+%.o:%.c
+	${CC} $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
+
+%.o:%.s
+	${CC} $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
+
+clean:
+	rm -f *.o *.bin *.elf *.dis
+	

@@ -41,4 +41,15 @@ Git鼓励大量使用分支：
 
 read+write
 $git clone git@github.com:flyingbird1221/gerrit-trigger-plugin.git 
+$ git push origin test:master         // 提交本地test分支作为远程的master分支
+$ git push origin test:test              // 提交本地test分支作为远程的test分支
+
+Git branch –a 显示所有的分支信息
+git checkout -b dev origin/dev
+将远程的dev分支取到本地，并自动切换到dev分支
+
+更新：
+Git pull origin master
+Git pull origin dev
+Git pull
 
